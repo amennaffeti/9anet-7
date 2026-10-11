@@ -1,14 +1,19 @@
 
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ChannelService, Channel as ApiChannel } from './services/channel.service';
 
 interface Channel {
+  id: number;
   name: string;
   category: 'Tunisian TV' | 'Cartoons';
   description: string;
   icon: string;
   color: string;
   status: string;
+  logoUrl: string | null;
+  streamUrl: string | null;
+  active: boolean;
 }
 
 @Component({
@@ -18,79 +23,93 @@ interface Channel {
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App {
+export class App implements OnInit {
+  private channelService = inject(ChannelService);
+
   searchQuery = '';
   activeCategory = 'All';
   selectedChannel: Channel | null = null;
+  loading = true;
+  errorMessage = '';
 
   categories = ['All', 'Tunisian TV', 'Cartoons'];
 
-  channels: Channel[] = [
-    {
-      name: 'Wataniya 1',
-      category: 'Tunisian TV',
-      description: 'National television',
+  channels: Channel[] = [];
+
+  private channelVisuals: Record<string, { icon: string; color: string; status: string }> = {
+    'Wataniya 1': {
       icon: '🇹🇳',
       color: '#b32635',
-      status: 'LIVE'
+      status: 'TV'
     },
-    {
-      name: 'Wataniya 2',
-      category: 'Tunisian TV',
-      description: 'Culture & entertainment',
+    'Wataniya 2': {
       icon: '📺',
       color: '#345c91',
-      status: 'LIVE'
+      status: 'TV'
     },
-    {
-      name: 'Hannibal TV',
-      category: 'Tunisian TV',
-      description: 'Entertainment',
+    'Hannibal TV': {
       icon: '🎬',
       color: '#9b6a37',
       status: 'TV'
     },
-    {
-      name: 'Nessma',
-      category: 'Tunisian TV',
-      description: 'News & entertainment',
+    'Nessma': {
       icon: '📡',
       color: '#247f83',
       status: 'TV'
     },
-    {
-      name: 'Kids Zone',
-      category: 'Cartoons',
-      description: 'Animated adventures',
+    'Kids Zone': {
       icon: '🚀',
       color: '#6c4ccf',
       status: 'KIDS'
     },
-    {
-      name: 'Cartoon World',
-      category: 'Cartoons',
-      description: 'Cartoons for everyone',
+    'Cartoon World': {
       icon: '🦊',
       color: '#d66b32',
       status: 'KIDS'
     },
-    {
-      name: 'Mini Adventures',
-      category: 'Cartoons',
-      description: 'Little heroes, big stories',
+    'Mini Adventures': {
       icon: '🪐',
       color: '#287d69',
       status: 'KIDS'
     },
-    {
-      name: 'Toon Planet',
-      category: 'Cartoons',
-      description: 'A world of animation',
+    'Toon Planet': {
       icon: '🌈',
       color: '#b14e83',
       status: 'KIDS'
     }
-  ];
+  };
+
+  ngOnInit(): void {
+    this.channelService.getChannels().subscribe({
+      next: (apiChannels: ApiChannel[]) => {
+        this.channels = apiChannels
+          .filter(channel => channel.active)
+          .map(channel => {
+            const visual = this.channelVisuals[channel.name] ?? {
+              icon: '📺',
+              color: '#345c91',
+              status: 'TV'
+            };
+
+            return {
+              ...channel,
+              category: channel.category as Channel['category'],
+              description: channel.description ?? '',
+              icon: visual.icon,
+              color: visual.color,
+              status: visual.status
+            };
+          });
+
+        this.loading = false;
+      },
+      error: () => {
+        this.errorMessage =
+          'Unable to load channels. Please make sure the backend is running.';
+        this.loading = false;
+      }
+    });
+  }
 
   get filteredChannels(): Channel[] {
     return this.channels.filter(channel => {
@@ -98,15 +117,17 @@ export class App {
         this.activeCategory === 'All' ||
         channel.category === this.activeCategory;
 
+      const query = this.searchQuery.toLowerCase();
+
       const matchesSearch =
-        channel.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        channel.description.toLowerCase().includes(this.searchQuery.toLowerCase());
+        channel.name.toLowerCase().includes(query) ||
+        channel.description.toLowerCase().includes(query);
 
       return matchesCategory && matchesSearch;
     });
   }
 
-  get featuredChannel(): Channel {
+  get featuredChannel(): Channel | undefined {
     return this.selectedChannel ?? this.channels[0];
   }
 

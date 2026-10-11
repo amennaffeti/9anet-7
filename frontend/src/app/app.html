@@ -3,7 +3,7 @@
   <aside class="sidebar">
     <a class="brand" href="#" (click)="$event.preventDefault()">
       <span class="brand-icon">▶</span>
-      <span>Tuni<span class="brand-highlight">Stream</span></span>
+      <span>قناة 7</span>
     </a>
 
     <div class="nav-label">MENU</div>
@@ -29,7 +29,7 @@
 
   <main class="main-content">
     <header class="topbar">
-      <div class="mobile-brand">▶ TuniStream</div>
+      <div class="mobile-brand">▶ قناة 7</div>
 
       <div class="search-box">
         <span>⌕</span>
@@ -153,27 +153,33 @@
       </div>
 
       <div class="player-panel">
-        <div class="player-visual" [style.background]="featuredChannel.color">
-          <span class="player-icon">{{ featuredChannel.icon }}</span>
-          <div class="player-overlay">
-            <span class="player-label">CHANNEL SELECTED</span>
-            <h3>{{ featuredChannel.name }}</h3>
-            <p>{{ featuredChannel.description }}</p>
+        @if (featuredChannel; as channel) {
+          <div class="player-visual" [style.background]="channel.color">
+            <span class="player-icon">{{ channel.icon }}</span>
+
+            <div>
+              <h3>{{ channel.name }}</h3>
+              <p>{{ channel.description }}</p>
+            </div>
           </div>
-          <span class="player-symbol">▶</span>
-        </div>
-        <div class="player-note">
-          <span class="note-icon">ℹ</span>
-          <p>
-            This is a preview placeholder. Live playback will be added
-            when an authorized stream URL is configured.
-          </p>
-        </div>
+        } @else if (loading) {
+          <div class="player-visual">
+            <p>Loading channels...</p>
+          </div>
+        } @else if (errorMessage) {
+          <div class="player-visual">
+            <p>{{ errorMessage }}</p>
+          </div>
+        } @else {
+          <div class="player-visual">
+            <p>No channels available.</p>
+          </div>
+        }
       </div>
     </section>
 
     <footer>
-      <span>▶ TuniStream</span>
+      <span>▶ قناة 7</span>
       <span>A personal project celebrating Tunisian television.</span>
     </footer>
   </main>
