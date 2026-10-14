@@ -1,0 +1,197 @@
+ <div class="cartoons-catalogue">
+  @if (!selectedShow) {
+    <div class="shows-grid">
+      <button
+        type="button"
+        class="show-card"
+        (click)="openShow('spongebob')"
+      >
+        <div class="show-cover">
+          <img
+            src="assets/cartoons/spongebob.jpg"
+            alt="SpongeBob cover"
+            loading="eager"
+          />
+          <span class="show-play">▶</span>
+        </div>
+        <div class="show-info">
+          <h3>SpongeBob</h3>
+          @if (!loading && !errorMessage) {
+            <p>{{ videos.length }} episodes • 40+ min each</p>
+          } @else {
+            <p>Tap to browse episodes</p>
+          }
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="show-card"
+        (click)="openShow('sally')"
+      >
+        <div class="show-cover">
+          <img
+            src="assets/cartoons/sally.jpg"
+            alt="Sally cover"
+            loading="eager"
+          />
+          <span class="show-play">▶</span>
+        </div>
+        <div class="show-info">
+          <h3>Sally</h3>
+          @if (!sallyLoading && !sallyError && sallyVideos.length > 0) {
+            <p>{{ sallyVideos.length }} episodes • Ep 1 to {{ sallyVideos.length }}</p>
+          } @else {
+            <p>Tap to browse episodes</p>
+          }
+        </div>
+      </button>
+    </div>
+  } @else {
+    <div class="episodes-header">
+      <button
+        type="button"
+        class="episodes-back"
+        (click)="closeShow()"
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path
+            d="M10 3 5 8l5 5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span>Shows</span>
+      </button>
+      <h3>{{ currentTitle }} <span>({{ currentVideos.length }} episodes)</span></h3>
+      <button
+        type="button"
+        class="layout-toggle"
+        (click)="toggleLayout()"
+        [attr.aria-label]="layout === 'grid' ? 'Switch to list view' : 'Switch to grid view'"
+        [attr.title]="layout === 'grid' ? 'List view' : 'Grid view'"
+      >
+        @if (layout === 'grid') {
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M2 4h4v4H2zM10 4h4v4h-4zM2 10h4v4H2zM10 10h4v4h-4z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>List</span>
+        } @else {
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M5.5 4h8M5.5 8h8M5.5 12h8"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+            <circle cx="2.5" cy="4" r="1.2" fill="currentColor" />
+            <circle cx="2.5" cy="8" r="1.2" fill="currentColor" />
+            <circle cx="2.5" cy="12" r="1.2" fill="currentColor" />
+          </svg>
+          <span>Grid</span>
+        }
+      </button>
+    </div>
+
+   @if (currentLoading) {
+    <p class="catalogue-message">Loading cartoons...</p>
+   } @else if (currentError) {
+    <p class="catalogue-message">{{ currentError }}</p>
+   } @else {
+    <div class="cartoon-grid" [class.is-list]="layout === 'list'">
+      @for (video of currentVideos; track video.videoId || video.episodeNumber) {
+        <button
+          type="button"
+          class="cartoon-card"
+          [disabled]="!video.videoId"
+          (click)="playVideo(video)"
+        >
+          <div class="cartoon-thumbnail">
+            @if (video.thumbnail) {
+              <img
+                [src]="video.thumbnail"
+                [alt]="video.title || ('Episode ' + video.episodeNumber)"
+                loading="lazy"
+                decoding="async"
+                width="320"
+                height="180"
+              />
+            }
+            @if (video.episodeNumber) {
+              <span class="cartoon-ep">Ep {{ video.episodeNumber }}</span>
+            }
+            @if (video.durationMinutes) {
+              <span class="cartoon-duration">{{ video.durationMinutes }} min</span>
+            }
+            @if (video.videoId) {
+              <span class="cartoon-play">▶</span>
+            } @else {
+              <span class="cartoon-soon">Soon</span>
+            }
+          </div>
+          <div class="cartoon-info">
+            <h3>{{ video.title || ('Episode ' + video.episodeNumber) }}</h3>
+            <p>{{ video.publishedAt | date:'mediumDate' }}</p>
+          </div>
+        </button>
+      } @empty {
+        <p class="catalogue-message">
+          No cartoons found.
+        </p>
+      }
+    </div>
+   }
+  }
+
+  @if (selectedVideo; as video) {
+    <div class="cartoon-player-overlay">
+      <div class="cartoon-player-dialog">
+        <button
+          type="button"
+          class="cartoon-close"
+          (click)="closeVideo()"
+        >
+          ✕ Close
+        </button>
+
+        <h3>{{ video.title }}</h3>
+
+        <iframe
+          [src]="selectedVideoUrl"
+          [title]="video.title"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen
+        ></iframe>
+
+        <div class="cartoon-player-nav">
+          <button
+            type="button"
+            [disabled]="!hasPrevious"
+            (click)="playPrevious()"
+          >
+            ‹ Prev
+          </button>
+          <span>{{ selectedEpisodeLabel }}</span>
+          <button
+            type="button"
+            [disabled]="!hasNext"
+            (click)="playNext()"
+          >
+            Next ›
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

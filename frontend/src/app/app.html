@@ -82,7 +82,11 @@
           <div class="section-kicker">FIND YOUR NEXT WATCH</div>
           <h2>Explore channels<span>.</span></h2>
         </div>
-        <span class="channel-count">{{ filteredChannels.length }} channels</span>
+        <span class="channel-count">
+          {{ activeCategory === 'Cartoons'
+              ? 'Cartoon videos'
+              : filteredChannels.length + ' channels' }}
+        </span>
       </div>
 
       @if (importMessage) {
@@ -100,6 +104,9 @@
         }
       </div>
 
+      @if (activeCategory === 'Cartoons') {
+        <app-cartoons></app-cartoons>
+      } @else {
       <div class="channel-grid">
         @if (loading) {
           <div class="empty-state">
@@ -137,6 +144,7 @@
           }
         }
       </div>
+      }
     </section>
 
     <footer>
@@ -220,9 +228,38 @@
               [muted]="true"
               autoplay
               (canplay)="onRadioCanPlay()"
+              (playing)="onRadioPlaying()"
+              (waiting)="onRadioWaiting()"
               (error)="onRadioError()">
             </audio>
             <app-media-controls [media]="radioElement"></app-media-controls>
+
+            @if (radioLoading) {
+              <div class="radio-loading" role="status" aria-live="polite">
+                <div class="radio-loading-card">
+                  <span class="radio-spinner" aria-hidden="true"></span>
+                  <div>
+                    <h3>Tuning in…</h3>
+                    <p>Please wait while {{ channel.name }} loads.</p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (radioFailed) {
+              <div class="radio-loading" role="alert">
+                <div class="radio-loading-card radio-loading-error">
+                  <div>
+                    <h3>Stream unavailable</h3>
+                    <p>{{ channel.name }} could not be loaded. Check your connection.</p>
+                    <div class="radio-loading-actions">
+                      <button type="button" (click)="retryRadio()">Try again</button>
+                      <button type="button" (click)="closePlayer()">Back to channels</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
           }
         } @else {
           <app-channel-player

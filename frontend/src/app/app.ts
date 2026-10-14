@@ -19,6 +19,7 @@ import {
 } from './services/channel.service';
 import { ChannelPlayer } from './channel-player/channel-player';
 import { MediaControls } from './media-controls/media-controls';
+import { Cartoons } from './cartoons/cartoons';
 
 interface Channel {
   id: number;
@@ -36,7 +37,7 @@ interface Channel {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule, ChannelPlayer, MediaControls],
+  imports: [FormsModule, ChannelPlayer, MediaControls, Cartoons],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -52,6 +53,9 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('introVideo')
   introVideo?: ElementRef<HTMLVideoElement>;
 
+  @ViewChild('radioElement')
+  radioElement?: ElementRef<HTMLAudioElement>;
+
   introState:
     | 'playing'
     | 'holding'
@@ -62,6 +66,8 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
   searchQuery = '';
   activeCategory = 'Tunisian TV';
   selectedChannel: Channel | null = null;
+  radioLoading = false;
+  radioFailed = false;
   loading = true;
   errorMessage = '';
   importingRadios = false;
@@ -315,6 +321,8 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
 
   playChannel(channel: Channel): void {
     this.selectedChannel = channel;
+    this.radioLoading = channel.category === 'Radios' && !!channel.streamUrl;
+    this.radioFailed = false;
     this.previousBodyOverflow = this.document.body.style.overflow;
     this.document.body.style.overflow = 'hidden';
 
@@ -328,6 +336,8 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
 
   closePlayer(): void {
     this.selectedChannel = null;
+    this.radioLoading = false;
+    this.radioFailed = false;
     this.document.body.style.overflow = this.previousBodyOverflow ?? '';
     this.previousBodyOverflow = null;
 
@@ -347,8 +357,31 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
     // The browser has enough data to begin playback.
   }
 
+  onRadioPlaying(): void {
+    // The stream is actually audible: dismiss the loading overlay.
+    this.radioLoading = false;
+    this.radioFailed = false;
+  }
+
+  onRadioWaiting(): void {
+    // Buffering mid-stream: show the loading overlay again.
+    if (this.selectedChannel?.streamUrl) {
+      this.radioFailed = false;
+      this.radioLoading = true;
+    }
+  }
+
   onRadioError(): void {
-    console.warn('The selected radio stream could not be played.');
+    this.radioLoading = false;
+    this.radioFailed = true;
+  }
+
+  retryRadio(): void {
+    if (!this.selectedChannel?.streamUrl) return;
+
+    this.radioFailed = false;
+    this.radioLoading = true;
+    this.radioElement?.nativeElement.load();
   }
 
   refreshRadios(): void {

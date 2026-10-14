@@ -27,3 +27,6 @@ Thumbs.db
 
 # Scripts
 /scripts/
+frontend/src/assets/cartoons/sally.jpg
+frontend/src/assets/cartoons/spongebob.jpg
+tunisian-iptv/src/main/resources/application.properties
