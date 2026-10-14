@@ -20,6 +20,10 @@
       <span>☆</span> Cartoons
     </button>
 
+    <button class="nav-item" (click)="selectCategory('Radios')">
+      <span>♫</span> Radios
+    </button>
+
     <div class="sidebar-bottom">
       <div class="tunisia-badge">🇹🇳</div>
       <p>Made for Tunisia</p>
@@ -97,8 +101,18 @@
           <div class="section-kicker">FIND YOUR NEXT WATCH</div>
           <h2>Explore channels<span>.</span></h2>
         </div>
+        <button
+          class="refresh-button"
+          [disabled]="importingRadios"
+          (click)="refreshRadios()">
+          {{ importingRadios ? 'Refreshing...' : '↻ Refresh radios' }}
+        </button>
         <span class="channel-count">{{ filteredChannels.length }} channels</span>
       </div>
+
+      @if (importMessage) {
+        <p class="import-message">{{ importMessage }}</p>
+      }
 
       <div class="category-tabs">
         @for (category of categories; track category) {
@@ -154,10 +168,41 @@
 
       <div class="player-panel">
         @if (featuredChannel; as channel) {
-          <app-channel-player
-            [streamUrl]="channel.streamUrl"
-            [channelName]="channel.name">
-          </app-channel-player>
+          @if (channel.category === 'Radios') {
+            <div class="radio-player">
+              <div class="radio-art" [style.background]="channel.color">
+                <span>♫</span>
+              </div>
+
+              <div class="radio-details">
+                <span class="radio-live">
+                  <span class="live-dot"></span>
+                  LIVE
+                </span>
+
+                <h3>{{ channel.name }}</h3>
+                <p>{{ channel.description }}</p>
+
+                @if (!channel.streamUrl) {
+                  <p>No stream available for this station.</p>
+                }
+              </div>
+
+              @if (channel.streamUrl) {
+                <audio
+                  [src]="channel.streamUrl"
+                  autoplay
+                  (canplay)="onRadioCanPlay()"
+                  (error)="onRadioError()">
+                </audio>
+              }
+            </div>
+          } @else {
+            <app-channel-player
+              [streamUrl]="channel.streamUrl"
+              [channelName]="channel.name">
+            </app-channel-player>
+          }
         } @else if (loading) {
           <div class="player-visual">
             <p>Loading channels...</p>
