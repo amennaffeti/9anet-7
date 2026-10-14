@@ -1,5 +1,16 @@
 
-import { Component, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  AfterViewInit,
+  ViewChild,
+  inject
+} from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import {
@@ -7,6 +18,7 @@ import {
   Channel as ApiChannel
 } from './services/channel.service';
 import { ChannelPlayer } from './channel-player/channel-player';
+import { MediaControls } from './media-controls/media-controls';
 
 interface Channel {
   id: number;
@@ -24,23 +36,39 @@ interface Channel {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule, ChannelPlayer],
+  imports: [FormsModule, ChannelPlayer, MediaControls],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App implements OnInit {
+export class App implements OnInit, AfterViewInit, OnDestroy {
   private channelService = inject(ChannelService);
   private http = inject(HttpClient);
+  private changeDetector = inject(ChangeDetectorRef);
+  private document = inject(DOCUMENT);
+  private previousBodyOverflow: string | null = null;
+  private introTimer: ReturnType<typeof setTimeout> | null = null;
+  private introCutTimer: ReturnType<typeof setTimeout> | null = null;
+
+  @ViewChild('introVideo')
+  introVideo?: ElementRef<HTMLVideoElement>;
+
+  introState:
+    | 'playing'
+    | 'holding'
+    | 'fading-to-black'
+    | 'revealing'
+    | 'done' = 'playing';
 
   searchQuery = '';
-  activeCategory = 'All';
+  activeCategory = 'Tunisian TV';
   selectedChannel: Channel | null = null;
   loading = true;
   errorMessage = '';
   importingRadios = false;
   importMessage = '';
+  private initialRadioImportAttempted = false;
 
-  categories = ['All', 'Tunisian TV', 'Cartoons', 'Radios'];
+  categories = ['Tunisian TV', 'Cartoons', 'Radios'];
 
   channels: Channel[] = [];
 
@@ -94,6 +122,117 @@ export class App implements OnInit {
     this.loadChannels();
   }
 
+  ngAfterViewInit(): void {
+    this.previousBodyOverflow = this.document.body.style.overflow;
+    this.document.body.style.overflow = 'hidden';
+
+    this.startHeroVideos();
+
+    const video = this.introVideo?.nativeElement;
+    if (!video) {
+      this.onIntroVideoError();
+      return;
+    }
+
+    video.muted = true;
+    video.playbackRate = 1;
+    video.play().catch(error => {
+      console.error('Intro video playback failed:', error);
+      this.onIntroVideoError();
+    });
+
+    // The file is ~8s: show ~4s at normal speed, then run the fade-out
+    // sequence. Also acts as a fallback if `ended` never fires.
+    this.clearIntroCutTimer();
+    this.introCutTimer = setTimeout(() => {
+      this.finishIntroEarly();
+    }, 4000);
+  }
+
+  private startHeroVideos(): void {
+    // The `muted` HTML attribute alone does not set the media `muted`
+    // property on dynamically created elements, so unmuted autoplay gets
+    // blocked and the clips look like static photos. Set it imperatively.
+    this.document.querySelectorAll('.hero-media video').forEach(element => {
+      const clip = element as HTMLVideoElement;
+      clip.muted = true;
+      clip.play().catch(() => {
+        // Autoplay blocked: the clip stays on its first frame.
+      });
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.introTimer) {
+      clearTimeout(this.introTimer);
+    }
+    this.clearIntroCutTimer();
+    this.document.body.style.overflow = this.previousBodyOverflow ?? '';
+  }
+
+  onIntroEnded(): void {
+    if (this.introState !== 'playing') return;
+
+    this.clearIntroCutTimer();
+    this.beginIntroOutro();
+  }
+
+  private finishIntroEarly(): void {
+    if (this.introState !== 'playing') return;
+
+    // Freeze at ~4s so the last visible frame holds briefly.
+    this.introVideo?.nativeElement.pause();
+    this.beginIntroOutro();
+  }
+
+  private beginIntroOutro(): void {
+    this.introState = 'holding';
+    this.introTimer = setTimeout(() => {
+      this.introState = 'fading-to-black';
+      this.changeDetector.markForCheck();
+
+      this.introTimer = setTimeout(() => {
+        this.introState = 'revealing';
+        this.changeDetector.markForCheck();
+
+        this.introTimer = setTimeout(() => {
+          this.introState = 'done';
+          this.document.body.style.overflow =
+            this.previousBodyOverflow ?? '';
+          this.previousBodyOverflow = null;
+          this.changeDetector.markForCheck();
+        }, 800);
+      }, 600);
+    }, 450);
+  }
+
+  private clearIntroCutTimer(): void {
+    if (this.introCutTimer) {
+      clearTimeout(this.introCutTimer);
+      this.introCutTimer = null;
+    }
+  }
+
+  onIntroVideoError(): void {
+    if (this.introState !== 'playing') return;
+
+    if (this.introTimer) {
+      clearTimeout(this.introTimer);
+    }
+    this.clearIntroCutTimer();
+
+    console.error('Intro video could not be loaded.');
+    this.introState = 'revealing';
+    this.changeDetector.markForCheck();
+
+    this.introTimer = setTimeout(() => {
+      this.introState = 'done';
+      this.document.body.style.overflow = this.previousBodyOverflow ?? '';
+      this.previousBodyOverflow = null;
+      this.changeDetector.markForCheck();
+    }, 800);
+  }
+
   private loadChannels(): void {
     this.loading = true;
     this.errorMessage = '';
@@ -130,20 +269,29 @@ export class App implements OnInit {
         }
 
         this.loading = false;
+
+        if (
+          !this.initialRadioImportAttempted &&
+          !this.channels.some(channel => channel.category === 'Radios')
+        ) {
+          this.initialRadioImportAttempted = true;
+          this.refreshRadios();
+        }
+
+        this.changeDetector.markForCheck();
       },
       error: () => {
         this.errorMessage =
           'Unable to load channels. Please make sure the backend is running.';
         this.loading = false;
+        this.changeDetector.markForCheck();
       }
     });
   }
 
   get filteredChannels(): Channel[] {
     return this.channels.filter(channel => {
-      const matchesCategory =
-        this.activeCategory === 'All' ||
-        channel.category === this.activeCategory;
+      const matchesCategory = channel.category === this.activeCategory;
 
       const query = this.searchQuery.toLowerCase().trim();
 
@@ -155,20 +303,44 @@ export class App implements OnInit {
     });
   }
 
-  get featuredChannel(): Channel | undefined {
-    return this.selectedChannel ?? this.channels[0];
-  }
-
-  get isRadioSelected(): boolean {
-    return this.featuredChannel?.category === 'Radios';
-  }
-
   selectCategory(category: string): void {
     this.activeCategory = category;
   }
 
+  scrollToChannels(): void {
+    this.document
+      .getElementById('channels')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   playChannel(channel: Channel): void {
     this.selectedChannel = channel;
+    this.previousBodyOverflow = this.document.body.style.overflow;
+    this.document.body.style.overflow = 'hidden';
+
+    const fullscreenElement = this.document.documentElement;
+    if (!this.document.fullscreenElement && fullscreenElement.requestFullscreen) {
+      void fullscreenElement.requestFullscreen().catch(error => {
+        console.warn('Fullscreen mode is unavailable:', error);
+      });
+    }
+  }
+
+  closePlayer(): void {
+    this.selectedChannel = null;
+    this.document.body.style.overflow = this.previousBodyOverflow ?? '';
+    this.previousBodyOverflow = null;
+
+    if (this.document.fullscreenElement && this.document.exitFullscreen) {
+      void this.document.exitFullscreen().catch(error => {
+        console.warn('Could not exit fullscreen mode:', error);
+      });
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.closePlayer();
   }
 
   onRadioCanPlay(): void {
@@ -203,12 +375,14 @@ export class App implements OnInit {
 
           this.loadChannels();
           this.importingRadios = false;
+          this.changeDetector.markForCheck();
         },
         error: error => {
           console.error('Radio import failed:', error);
           this.importMessage =
             'Could not refresh radios. Check that the backend is running.';
           this.importingRadios = false;
+          this.changeDetector.markForCheck();
         }
       });
   }

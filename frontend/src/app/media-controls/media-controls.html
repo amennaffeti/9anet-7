@@ -1,0 +1,61 @@
+<div class="glass-controls" role="group" aria-label="Stream audio controls">
+  <button
+    class="mute-button"
+    type="button"
+    [attr.aria-label]="isMuted ? 'Unmute stream' : 'Mute stream'"
+    [attr.title]="isMuted ? 'Unmute' : 'Mute'"
+    (click)="toggleMuted()">
+    @if (isMuted || volume === 0) {
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+        <path d="m17 9 5 6m0-6-5 6"></path>
+      </svg>
+    } @else {
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M11 5 6 9H3v6h3l5 4V5Z"></path>
+        @if (volume < 0.5) {
+          <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+        } @else {
+          <path d="M15.5 5a9 9 0 0 1 0 14m4-17a14 14 0 0 1 0 20"></path>
+        }
+      </svg>
+    }
+  </button>
+
+  <button
+    class="volume-step"
+    type="button"
+    aria-label="Decrease volume"
+    [disabled]="!media || volume === 0"
+    (click)="changeVolume(-0.1)">
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M4 10h12"></path>
+    </svg>
+  </button>
+
+  <input
+    class="volume-slider"
+    type="range"
+    min="0"
+    max="1"
+    step="0.05"
+    [value]="volume"
+    [style.--volume-level]="volumePercent + '%'"
+    aria-label="Stream volume"
+    [attr.aria-valuetext]="volumePercent + '%'"
+    [disabled]="!media"
+    (input)="onVolumeInput($event)" />
+
+  <button
+    class="volume-step"
+    type="button"
+    aria-label="Increase volume"
+    [disabled]="!media || volume === 1"
+    (click)="changeVolume(0.1)">
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M4 10h12M10 4v12"></path>
+    </svg>
+  </button>
+
+  <span class="volume-value" aria-live="polite">{{ volumePercent }}%</span>
+</div>

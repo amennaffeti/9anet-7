@@ -1,1 +1,348 @@
 /* You can add global styles to this file, and also import other style files */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #0c0c12;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.app-shell {
+  opacity: 0;
+  transition: opacity 800ms ease;
+}
+
+.app-shell.intro-revealing,
+.app-shell.intro-visible {
+  opacity: 1;
+}
+
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  background: #000;
+  opacity: 1;
+  transition: opacity 800ms ease;
+}
+
+.intro-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+  transition: opacity 600ms ease;
+}
+
+.intro-overlay.is-fading-to-black .intro-video,
+.intro-overlay.is-revealing .intro-video {
+  opacity: 0;
+}
+
+.intro-overlay.is-revealing {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell,
+  .intro-overlay,
+  .intro-video {
+    transition-duration: 1ms;
+  }
+}
+
+.radio-player {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 28px;
+  background: #080a0f;
+  border-radius: 12px;
+  color: white;
+}
+
+.radio-art {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: white;
+  font-size: 64px;
+}
+
+.radio-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.radio-details h3 {
+  margin: 12px 0 6px;
+}
+
+.radio-details p {
+  color: #b8bdc9;
+}
+
+.radio-audio {
+  display: none;
+}
+
+.radio-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.radio-live .live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: radio-pulse 1.4s infinite;
+}
+
+.refresh-button {
+  padding: 9px 13px;
+  border: 1px solid #345c91;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.import-message {
+  color: #b8bdc9;
+  font-size: 13px;
+}
+
+.watch-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 45%, #17202d 0%, #090b11 48%, #050609 100%);
+  animation: watch-fade-in 350ms ease-out both;
+}
+
+.watch-screen {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  animation: watch-enter 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.watch-header {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 112px;
+  padding: 22px clamp(22px, 5vw, 76px);
+  border-bottom: 1px solid #ffffff12;
+  background: linear-gradient(180deg, #080a0fdd, #080a0f88);
+}
+
+.watch-channel h2 {
+  margin: 7px 0 3px;
+  color: #f7f7fb;
+  font-size: clamp(20px, 3vw, 30px);
+  letter-spacing: -0.8px;
+}
+
+.watch-channel p {
+  margin: 0;
+  color: #a5aaba;
+  font-size: 13px;
+}
+
+.watch-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ff6964;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+}
+
+.watch-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  border: 1px solid #ffffff26;
+  border-radius: 999px;
+  background: #ffffff0a;
+  color: #f5f5f8;
+  font-size: 12px;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.watch-close:hover {
+  transform: translateY(-1px);
+  border-color: #ffffff55;
+  background: #ffffff16;
+}
+
+.watch-close > span:first-child {
+  font-size: 21px;
+  line-height: 0.8;
+}
+
+.watch-content {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.watch-content app-channel-player {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.watch-content .radio-player {
+  justify-content: center;
+  width: min(calc(100% - 48px), 960px);
+  padding: clamp(28px, 6vw, 80px);
+  background: linear-gradient(145deg, #141923, #0b0d13);
+  border: 1px solid #ffffff14;
+  box-shadow: 0 30px 100px #0008;
+  animation: radio-arrive 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.watch-content .radio-art {
+  width: clamp(130px, 22vw, 260px);
+  height: clamp(130px, 22vw, 260px);
+  box-shadow: 0 22px 60px #0008;
+}
+
+.watch-content .radio-details h3 {
+  font-size: clamp(25px, 4vw, 42px);
+  letter-spacing: -1.2px;
+}
+
+.watch-content .radio-details p {
+  font-size: 15px;
+}
+
+@keyframes radio-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes watch-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes watch-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(24px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes radio-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .floating-card {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .radio-player {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px;
+  }
+
+  .radio-art {
+    width: 100%;
+    height: 120px;
+  }
+
+  .watch-header {
+    min-height: 92px;
+    padding: 16px;
+  }
+
+  .watch-channel p {
+    max-width: 45vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .watch-close {
+    padding: 10px 12px;
+  }
+
+  .watch-close > span:last-child {
+    display: none;
+  }
+
+  .watch-content .radio-player {
+    width: calc(100% - 32px);
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1150px) {
+  .radio-player {
+    padding: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watch-overlay,
+  .watch-screen,
+  .watch-content .radio-player {
+    animation: none;
+  }
+}

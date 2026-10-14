@@ -10,17 +10,14 @@
       [attr.aria-label]="channelName + ' live stream'">
     </video>
 
+    <app-media-controls
+      [media]="videoElement">
+    </app-media-controls>
+
     <div class="live-badge">
       <span class="live-dot"></span>
       LIVE
     </div>
-
-    <button
-      class="sound-button"
-      type="button"
-      (click)="toggleSound()">
-      {{ isMuted ? 'Unmute' : 'Mute' }}
-    </button>
   </div>
 
   <p class="player-message">{{ message }}</p>

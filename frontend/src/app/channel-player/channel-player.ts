@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   Input,
@@ -6,20 +7,24 @@ import {
   AfterViewInit,
   OnDestroy,
   SimpleChanges,
-  ViewChild
+  ViewChild,
+  inject
 } from '@angular/core';
 
 import Hls from 'hls.js';
+import { MediaControls } from '../media-controls/media-controls';
 
 @Component({
   selector: 'app-channel-player',
   standalone: true,
-  imports: [],
+  imports: [MediaControls],
   templateUrl: './channel-player.html',
   styleUrl: './channel-player.scss'
 })
 export class ChannelPlayer
   implements OnChanges, AfterViewInit, OnDestroy {
+
+  private changeDetector = inject(ChangeDetectorRef);
 
   @Input() streamUrl: string | null = null;
   @Input() channelName = 'Channel';
@@ -27,14 +32,16 @@ export class ChannelPlayer
   @ViewChild('videoElement')
   videoElement?: ElementRef<HTMLVideoElement>;
 
-  isMuted = true;
   message = 'No stream URL configured.';
   private hls: Hls | null = null;
   private viewReady = false;
 
   ngAfterViewInit(): void {
     this.viewReady = true;
-    this.loadStream();
+    setTimeout(() => {
+      this.loadStream();
+      this.changeDetector.markForCheck();
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -57,6 +64,7 @@ export class ChannelPlayer
 
     if (!this.streamUrl) {
       this.message = 'No stream URL configured.';
+      this.changeDetector.markForCheck();
       return;
     }
 
@@ -68,6 +76,7 @@ export class ChannelPlayer
       this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
         this.message = 'Stream ready.';
         this.startPlayback();
+        this.changeDetector.markForCheck();
       });
 
       this.hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -75,6 +84,7 @@ export class ChannelPlayer
           this.message =
             'Playback failed. Check the stream URL or network.';
           console.error('Fatal HLS error:', data);
+          this.changeDetector.markForCheck();
         }
       });
 
@@ -90,21 +100,8 @@ export class ChannelPlayer
     } else {
       this.message = 'HLS playback is not supported here.';
     }
-  }
 
-  toggleSound(): void {
-    const video = this.videoElement?.nativeElement;
-
-    if (!video) return;
-
-    this.isMuted = !this.isMuted;
-    video.muted = this.isMuted;
-
-    if (!this.isMuted) {
-      video.play().catch(error => {
-        console.error('Playback error:', error);
-      });
-    }
+    this.changeDetector.markForCheck();
   }
 
   private startPlayback(): void {
@@ -112,12 +109,12 @@ export class ChannelPlayer
 
     if (!video) return;
 
-    this.isMuted = true;
     video.muted = true;
 
     video.play().catch(error => {
       this.message = 'Unable to autoplay. Check the stream connection.';
       console.error('Autoplay error:', error);
+      this.changeDetector.markForCheck();
     });
   }
 

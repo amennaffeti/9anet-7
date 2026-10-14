@@ -1,39 +1,12 @@
 
-<div class="app-shell">
-  <aside class="sidebar">
-    <a class="brand" href="#" (click)="$event.preventDefault()">
-      <span class="brand-icon">▶</span>
-      <span>قناة 7</span>
-    </a>
-
-    <div class="nav-label">MENU</div>
-
-    <button class="nav-item active" (click)="selectCategory('All')">
-      <span>⌂</span> Discover
-    </button>
-
-    <button class="nav-item" (click)="selectCategory('Tunisian TV')">
-      <span>▣</span> Tunisian TV
-    </button>
-
-    <button class="nav-item" (click)="selectCategory('Cartoons')">
-      <span>☆</span> Cartoons
-    </button>
-
-    <button class="nav-item" (click)="selectCategory('Radios')">
-      <span>♫</span> Radios
-    </button>
-
-    <div class="sidebar-bottom">
-      <div class="tunisia-badge">🇹🇳</div>
-      <p>Made for Tunisia</p>
-      <span>Your screens. Your culture.</span>
-    </div>
-  </aside>
-
+<div
+  class="app-shell"
+  [class.intro-revealing]="introState === 'revealing'"
+  [class.intro-visible]="introState === 'done'"
+  [attr.inert]="introState !== 'done' ? '' : null">
   <main class="main-content">
     <header class="topbar">
-      <div class="mobile-brand">▶ قناة 7</div>
+      <img class="site-logo" src="assets/logo.jpg" alt="Website logo" />
 
       <div class="search-box">
         <span>⌕</span>
@@ -45,14 +18,21 @@
         />
         <kbd>SEARCH</kbd>
       </div>
-
-      <div class="header-tag">
-        <span class="status-dot"></span>
-        YOUR TV HUB
-      </div>
     </header>
 
-    <section class="hero">
+    <nav class="topnav" aria-label="Categories">
+      @for (category of categories; track category) {
+        <button
+          [class.selected]="activeCategory === category"
+          (click)="selectCategory(category)"
+        >
+          {{ category }}
+        </button>
+      }
+    </nav>
+
+    <section class="hero glass">
+      <div class="hero-glow" aria-hidden="true"></div>
       <div class="hero-content">
         <div class="eyebrow">
           <span class="live-dot"></span>
@@ -62,51 +42,46 @@
         <h1>Television,<br />closer to <span>home.</span></h1>
 
         <p>
-          Discover Tunisian television and animated adventures
-          in one place. Your entertainment, all together.
+          Discover Tunisian television, radio and childhood
+          animated adventures in one place. Your entertainment,
+          all together.
         </p>
 
-        <button class="primary-button" (click)="selectCategory('Tunisian TV')">
+        <button class="primary-button glass-button" (click)="scrollToChannels()">
           Explore channels <span>→</span>
         </button>
-
-        <div class="hero-meta">
-          <span>🇹🇳 Made for Tunisia</span>
-          <span class="meta-divider">•</span>
-          <span>TV &amp; Cartoons</span>
-        </div>
       </div>
 
-      <div class="hero-art" aria-hidden="true">
-        <div class="orbit orbit-one"></div>
-        <div class="orbit orbit-two"></div>
-        <div class="hero-screen">
-          <div class="screen-top">
-            <span class="screen-dot"></span>
-            <span class="screen-dot"></span>
-            <span class="screen-dot"></span>
-            <span class="screen-live">LIVE</span>
-          </div>
-          <div class="screen-flag">🇹🇳</div>
-          <div class="screen-caption">YOUR TV. YOUR HOME.</div>
+      <div class="hero-media" aria-hidden="true">
+        <div class="clip-card clip-one">
+          <video
+            src="assets/CH.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="auto"
+          ></video>
         </div>
-        <div class="floating-card floating-one">📺 <span>Live TV</span></div>
-        <div class="floating-card floating-two">🎨 <span>Cartoons</span></div>
+        <div class="clip-card clip-two">
+          <video
+            src="assets/N.mp4"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="auto"
+          ></video>
+        </div>
       </div>
     </section>
 
-    <section class="channels-section">
+    <section class="channels-section" id="channels">
       <div class="section-heading">
         <div>
           <div class="section-kicker">FIND YOUR NEXT WATCH</div>
           <h2>Explore channels<span>.</span></h2>
         </div>
-        <button
-          class="refresh-button"
-          [disabled]="importingRadios"
-          (click)="refreshRadios()">
-          {{ importingRadios ? 'Refreshing...' : '↻ Refresh radios' }}
-        </button>
         <span class="channel-count">{{ filteredChannels.length }} channels</span>
       </div>
 
@@ -126,95 +101,40 @@
       </div>
 
       <div class="channel-grid">
-        @for (channel of filteredChannels; track channel.name) {
-          <button
-            class="channel-card"
-            [class.channel-selected]="selectedChannel?.name === channel.name"
-            (click)="playChannel(channel)"
-          >
-            <div class="channel-art" [style.background]="channel.color">
-              <span class="channel-status">{{ channel.status }}</span>
-              <span class="channel-icon">{{ channel.icon }}</span>
-              <span class="card-play">▶</span>
-            </div>
-            <div class="channel-info">
-              <div>
-                <h3>{{ channel.name }}</h3>
-                <p>{{ channel.description }}</p>
-              </div>
-              <span class="arrow">↗</span>
-            </div>
-          </button>
-        } @empty {
+        @if (loading) {
           <div class="empty-state">
-            <span>⌕</span>
-            <h3>No channels found</h3>
-            <p>Try another search or category.</p>
-            <button (click)="searchQuery = ''; selectCategory('All')">
-              Clear filters
-            </button>
-          </div>
-        }
-      </div>
-    </section>
-
-    <section class="player-section">
-      <div class="section-heading">
-        <div>
-          <div class="section-kicker">YOUR VIEWING SPACE</div>
-          <h2>Now selected<span>.</span></h2>
-        </div>
-      </div>
-
-      <div class="player-panel">
-        @if (featuredChannel; as channel) {
-          @if (channel.category === 'Radios') {
-            <div class="radio-player">
-              <div class="radio-art" [style.background]="channel.color">
-                <span>♫</span>
-              </div>
-
-              <div class="radio-details">
-                <span class="radio-live">
-                  <span class="live-dot"></span>
-                  LIVE
-                </span>
-
-                <h3>{{ channel.name }}</h3>
-                <p>{{ channel.description }}</p>
-
-                @if (!channel.streamUrl) {
-                  <p>No stream available for this station.</p>
-                }
-              </div>
-
-              @if (channel.streamUrl) {
-                <audio
-                  [src]="channel.streamUrl"
-                  autoplay
-                  (canplay)="onRadioCanPlay()"
-                  (error)="onRadioError()">
-                </audio>
-              }
-            </div>
-          } @else {
-            <app-channel-player
-              [streamUrl]="channel.streamUrl"
-              [channelName]="channel.name">
-            </app-channel-player>
-          }
-        } @else if (loading) {
-          <div class="player-visual">
             <p>Loading channels...</p>
           </div>
-        } @else if (errorMessage) {
-          <div class="player-visual">
-            <p>{{ errorMessage }}</p>
-          </div>
         } @else {
-          <div class="player-visual">
-            <p>No channels available.</p>
-          </div>
+          @for (channel of filteredChannels; track channel.name) {
+            <button
+              class="channel-card"
+              [class.channel-selected]="selectedChannel?.name === channel.name"
+              (click)="playChannel(channel)"
+            >
+              <div class="channel-art" [style.background]="channel.color">
+                <span class="channel-status">{{ channel.status }}</span>
+                <span class="channel-icon">{{ channel.icon }}</span>
+                <span class="card-play">▶</span>
+              </div>
+              <div class="channel-info">
+                <div>
+                  <h3>{{ channel.name }}</h3>
+                  <p>{{ channel.description }}</p>
+                </div>
+                <span class="arrow">↗</span>
+              </div>
+            </button>
+          } @empty {
+            <div class="empty-state">
+              <span>⌕</span>
+              <h3>No channels found</h3>
+              <p>Try another search or category.</p>
+              <button (click)="searchQuery = ''; selectCategory('Tunisian TV')">
+                Clear filters
+              </button>
+            </div>
+          }
         }
       </div>
     </section>
@@ -225,3 +145,92 @@
     </footer>
   </main>
 </div>
+
+@if (introState !== 'done') {
+  <div
+    class="intro-overlay"
+    [class.is-fading-to-black]="introState === 'fading-to-black'"
+    [class.is-revealing]="introState === 'revealing'"
+    aria-hidden="true">
+    <video
+      #introVideo
+      class="intro-video"
+      src="assets/intro.mp4"
+      autoplay
+      muted
+      playsinline
+      preload="auto"
+      (ended)="onIntroEnded()"
+      (error)="onIntroVideoError()">
+    </video>
+  </div>
+}
+
+@if (selectedChannel; as channel) {
+  <div
+    class="watch-overlay"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Now playing ' + channel.name"
+    (click)="$event.target === $event.currentTarget && closePlayer()">
+    <div class="watch-screen">
+      <header class="watch-header">
+        <div class="watch-channel">
+          <span class="watch-live"><span class="live-dot"></span> NOW PLAYING</span>
+          <h2>{{ channel.name }}</h2>
+          <p>{{ channel.description }}</p>
+        </div>
+        <button
+          class="watch-close"
+          type="button"
+          aria-label="Close player"
+          (click)="closePlayer()">
+          <span aria-hidden="true">×</span>
+          <span>Back to channels</span>
+        </button>
+      </header>
+
+      <div class="watch-content">
+        @if (channel.category === 'Radios') {
+          <div class="radio-player">
+            <div class="radio-art" [style.background]="channel.color">
+              <span>♫</span>
+            </div>
+
+            <div class="radio-details">
+              <span class="radio-live">
+                <span class="live-dot"></span>
+                LIVE RADIO
+              </span>
+              <h3>{{ channel.name }}</h3>
+              <p>{{ channel.description }}</p>
+
+              @if (!channel.streamUrl) {
+                <p>No stream available for this station.</p>
+              }
+            </div>
+
+          </div>
+
+          @if (channel.streamUrl) {
+            <audio
+              #radioElement
+              class="radio-audio"
+              [src]="channel.streamUrl"
+              [muted]="true"
+              autoplay
+              (canplay)="onRadioCanPlay()"
+              (error)="onRadioError()">
+            </audio>
+            <app-media-controls [media]="radioElement"></app-media-controls>
+          }
+        } @else {
+          <app-channel-player
+            [streamUrl]="channel.streamUrl"
+            [channelName]="channel.name">
+          </app-channel-player>
+        }
+      </div>
+    </div>
+  </div>
+}
