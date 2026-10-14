@@ -1,0 +1,22 @@
+
+.channel-player {
+  width: 100%;
+  background: #080a0f;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #080a0f;
+  object-fit: contain;
+}
+
+.player-message {
+  padding: 10px 16px;
+  margin: 0;
+  color: #b8bdc9;
+  font-size: 13px;
+}

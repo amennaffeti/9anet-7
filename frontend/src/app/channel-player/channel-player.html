@@ -1,0 +1,27 @@
+
+<div class="channel-player">
+  <div class="video-container">
+    <video
+      #videoElement
+      autoplay
+      muted
+      playsinline
+      preload="auto"
+      [attr.aria-label]="channelName + ' live stream'">
+    </video>
+
+    <div class="live-badge">
+      <span class="live-dot"></span>
+      LIVE
+    </div>
+
+    <button
+      class="sound-button"
+      type="button"
+      (click)="toggleSound()">
+      {{ isMuted ? 'Unmute' : 'Mute' }}
+    </button>
+  </div>
+
+  <p class="player-message">{{ message }}</p>
+</div>

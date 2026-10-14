@@ -154,14 +154,10 @@
 
       <div class="player-panel">
         @if (featuredChannel; as channel) {
-          <div class="player-visual" [style.background]="channel.color">
-            <span class="player-icon">{{ channel.icon }}</span>
-
-            <div>
-              <h3>{{ channel.name }}</h3>
-              <p>{{ channel.description }}</p>
-            </div>
-          </div>
+          <app-channel-player
+            [streamUrl]="channel.streamUrl"
+            [channelName]="channel.name">
+          </app-channel-player>
         } @else if (loading) {
           <div class="player-visual">
             <p>Loading channels...</p>

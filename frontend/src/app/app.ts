@@ -2,6 +2,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChannelService, Channel as ApiChannel } from './services/channel.service';
+import { ChannelPlayer } from './channel-player/channel-player';
 
 interface Channel {
   id: number;
@@ -19,7 +20,7 @@ interface Channel {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ChannelPlayer],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
