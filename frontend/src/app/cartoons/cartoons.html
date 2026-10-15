@@ -64,7 +64,7 @@
             stroke-linejoin="round"
           />
         </svg>
-        <span>Shows</span>
+        <span>Cartoons</span>
       </button>
       <h3>{{ currentTitle }} <span>({{ currentVideos.length }} episodes)</span></h3>
       <button
@@ -107,6 +107,11 @@
     <p class="catalogue-message">Loading cartoons...</p>
    } @else if (currentError) {
     <p class="catalogue-message">{{ currentError }}</p>
+    @if (selectedShow === 'sally') {
+      <p class="catalogue-retry">
+        <button type="button" (click)="retrySally()">Try again</button>
+      </p>
+    }
    } @else {
     <div class="cartoon-grid" [class.is-list]="layout === 'list'">
       @for (video of currentVideos; track video.videoId || video.episodeNumber) {

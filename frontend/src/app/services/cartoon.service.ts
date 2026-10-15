@@ -64,4 +64,8 @@ export class CartoonService {
     }
     return this.sallyCache$;
   }
+
+  refreshSally(): void {
+    this.sallyCache$ = null;
+  }
 }

@@ -11,12 +11,17 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,7 +56,9 @@ public class ToonsService {
     private static final Pattern POSTER = Pattern.compile(
             "poster:\\s*'([^']+)'");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(10))
+            .build();
 
     @SuppressWarnings("unused")
     private final ObjectMapper objectMapper;
@@ -105,33 +112,58 @@ public class ToonsService {
             pages.put(episodeNumber, toAbsoluteUrl(href));
         }
 
-        List<Map<String, Object>> episodes = new ArrayList<>();
-        for (int episodeNumber = 1;
-             episodeNumber <= SALLY_EPISODES;
-             episodeNumber++) {
-            String pageUrl = pages.get(episodeNumber);
-            if (pageUrl == null) {
-                episodes.add(emptyEpisode(episodeNumber));
-                continue;
+        // Fetch episode pages in parallel: 46 sequential page loads is
+        // what made cold opens take ~20s. Six workers bring it to seconds.
+        ExecutorService pool = Executors.newFixedThreadPool(6);
+        try {
+            List<Future<Map<String, Object>>> futures = new ArrayList<>();
+            for (Map.Entry<Integer, String> page : pages.entrySet()) {
+                final int episodeNumber = page.getKey();
+                final String pageUrl = page.getValue();
+                futures.add(pool.submit(() -> {
+                    try {
+                        return fetchEpisode(episodeNumber, pageUrl);
+                    } catch (Exception error) {
+                        Map<String, Object> episode =
+                                emptyEpisode(episodeNumber);
+                        episode.put("pageUrl", pageUrl);
+                        return episode;
+                    }
+                }));
             }
-            try {
-                episodes.add(fetchEpisode(episodeNumber, pageUrl));
-            } catch (Exception error) {
-                Map<String, Object> episode =
-                        emptyEpisode(episodeNumber);
-                episode.put("pageUrl", pageUrl);
-                episodes.add(episode);
-            }
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(
-                        "Sally scrape was interrupted.");
-            }
-        }
 
-        return episodes;
+            Set<Integer> found = new HashSet<>();
+            List<Map<String, Object>> episodes = new ArrayList<>();
+            for (Future<Map<String, Object>> future : futures) {
+                try {
+                    Map<String, Object> episode = future.get();
+                    episodes.add(episode);
+                    found.add((Integer) episode.get("episodeNumber"));
+                } catch (ExecutionException failed) {
+                    throw new IllegalStateException(
+                            "Sally scrape failed.",
+                            failed.getCause());
+                }
+            }
+
+            for (int episodeNumber = 1;
+                 episodeNumber <= SALLY_EPISODES;
+                 episodeNumber++) {
+                if (!found.contains(episodeNumber)) {
+                    episodes.add(emptyEpisode(episodeNumber));
+                }
+            }
+
+            episodes.sort(Comparator.comparingInt(
+                    episode -> (Integer) episode.get("episodeNumber")));
+            return episodes;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Sally scrape was interrupted.");
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     private Map<String, Object> fetchEpisode(
@@ -196,6 +228,7 @@ public class ToonsService {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("User-Agent", BROWSER_UA)
+                .timeout(java.time.Duration.ofSeconds(20))
                 .GET()
                 .build();
 

@@ -70,6 +70,9 @@ export class Cartoons implements OnInit {
           this.changeDetector.markForCheck();
         }
       });
+    // Warm the Sally list in the background while the user looks at the
+    // covers, so opening Sally feels instant even on a cold backend.
+    this.ensureSallyLoaded();
   }
 
   get currentVideos(): CartoonVideo[] {
@@ -164,26 +167,37 @@ export class Cartoons implements OnInit {
 
   openShow(show: ShowId): void {
     this.selectedShow = show;
-    if (show === 'sally' && !this.sallyRequested) {
-      this.sallyRequested = true;
-      this.sallyLoading = true;
-      this.sallyError = '';
-      this.cartoons.getSallyVideos().subscribe({
-        next: videos => {
-          this.sallyVideos = videos;
-          this.sallyLoading = false;
-          this.changeDetector.markForCheck();
-        },
-        error: error => {
-          console.error('Failed to load Sally episodes:', error);
-          this.sallyError =
-            'Could not load Sally episodes. Check that the backend is running.';
-          this.sallyLoading = false;
-          this.changeDetector.markForCheck();
-        }
-      });
+    if (show === 'sally') {
+      this.ensureSallyLoaded();
     }
     this.changeDetector.markForCheck();
+  }
+
+  retrySally(): void {
+    this.sallyRequested = false;
+    this.cartoons.refreshSally();
+    this.ensureSallyLoaded();
+  }
+
+  private ensureSallyLoaded(): void {
+    if (this.sallyRequested) return;
+    this.sallyRequested = true;
+    this.sallyLoading = true;
+    this.sallyError = '';
+    this.cartoons.getSallyVideos().subscribe({
+      next: videos => {
+        this.sallyVideos = videos;
+        this.sallyLoading = false;
+        this.changeDetector.markForCheck();
+      },
+      error: error => {
+        console.error('Failed to load Sally episodes:', error);
+        this.sallyError =
+          'Could not load Sally episodes. Check that the backend is running.';
+        this.sallyLoading = false;
+        this.changeDetector.markForCheck();
+      }
+    });
   }
 
   closeShow(): void {

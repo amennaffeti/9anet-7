@@ -4,6 +4,8 @@ package tn.tunisianiptv.repository;
 import tn.tunisianiptv.entity.Channel;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
     boolean existsByStreamUrl(String streamUrl);
@@ -12,4 +14,6 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
             String name,
             String category
     );
+
+    Optional<Channel> findFirstByNameIgnoreCase(String name);
 }

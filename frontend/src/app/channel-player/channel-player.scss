@@ -33,3 +33,228 @@ video {
   font-size: 13px;
   background: linear-gradient(transparent, #080a0fcc);
 }
+
+.edge-strip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  background: linear-gradient(270deg, #ffffff14, transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: auto;
+}
+
+.channel-player:hover .edge-strip {
+  opacity: 1;
+}
+
+.edge-strip > span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 44px;
+  border-radius: 8px 0 0 8px;
+  background: #ffffff14;
+  border: 1px solid #ffffff22;
+  border-right: 0;
+  color: #fff;
+  font-size: 15px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: strip-nudge 2.2s ease-in-out infinite;
+}
+
+@keyframes strip-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-3px); }
+}
+
+.rail-toggle {
+  position: absolute;
+  right: 12px;
+  bottom: 52px;
+  z-index: 7;
+  display: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #ffffff2e;
+  border-radius: 50%;
+  background: #ffffff12;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: 17px;
+}
+
+@media (pointer: coarse) {
+  .rail-toggle {
+    display: grid;
+  }
+
+  .edge-strip {
+    display: none;
+  }
+}
+
+.channel-rail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: min(300px, 78%);
+  background: linear-gradient(160deg, #17141ff2 0%, #0c0d13f5 100%);
+  border-left: 1px solid #ffffff22;
+  box-shadow: -24px 0 60px #000a;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transform: translateX(102%);
+  opacity: 0;
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.channel-rail.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid #ffffff14;
+}
+
+.rail-title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+}
+
+.rail-count {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #ff554f22;
+  border: 1px solid #ff554f44;
+  color: #ff8d88;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.rail-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 10px;
+  list-style: none;
+}
+
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.channel-rail.open .rail-item {
+  animation: rail-item-in 300ms ease both;
+}
+
+.channel-rail.open li:nth-child(2) .rail-item { animation-delay: 30ms; }
+.channel-rail.open li:nth-child(3) .rail-item { animation-delay: 60ms; }
+.channel-rail.open li:nth-child(4) .rail-item { animation-delay: 90ms; }
+.channel-rail.open li:nth-child(5) .rail-item { animation-delay: 120ms; }
+.channel-rail.open li:nth-child(n+6) .rail-item { animation-delay: 150ms; }
+
+@keyframes rail-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.rail-item:hover {
+  background: #ffffff0d;
+  border-color: #ffffff1c;
+}
+
+.rail-item.current {
+  background: #ff554f1c;
+  border-color: #ff554f55;
+}
+
+.rail-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  font-size: 17px;
+}
+
+.rail-name {
+  flex: 1;
+  min-width: 0;
+  color: #f0f0f6;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rail-now {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--accent, #ff554f);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.rail-empty {
+  padding: 20px;
+  text-align: center;
+  color: #8d8da0;
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .channel-rail,
+  .edge-strip,
+  .rail-item {
+    transition: none;
+    animation: none;
+  }
+
+  .edge-strip > span {
+    animation: none;
+  }
+}

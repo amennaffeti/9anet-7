@@ -8,28 +8,57 @@
     <header class="topbar">
       <img class="site-logo" src="assets/logo.jpg" alt="Website logo" />
 
-      <div class="search-box">
-        <span>⌕</span>
+      <div class="search-box" [class.is-open]="showSuggestions">
+        <span class="search-icon" aria-hidden="true">⌕</span>
         <input
           type="text"
-          placeholder="Search channels..."
+          [placeholder]="searchPlaceholder"
           [(ngModel)]="searchQuery"
-          aria-label="Search channels"
+          aria-label="Search channels, shows and radios"
+          role="combobox"
+          aria-autocomplete="list"
+          [attr.aria-expanded]="showSuggestions"
+          (focus)="searchFocused = true"
+          (blur)="onSearchBlur()"
+          (keydown)="onSearchKeydown($event)"
         />
+        @if (searchQuery) {
+          <button
+            type="button"
+            class="search-clear"
+            aria-label="Clear search"
+            (mousedown)="clearSearch($event)"
+          >×</button>
+        }
         <kbd>SEARCH</kbd>
+        @if (showSuggestions) {
+          <ul class="search-suggest" role="listbox" aria-label="Search suggestions">
+            @for (suggestion of suggestions; track suggestion.label; let i = $index) {
+              <li
+                role="option"
+                [attr.aria-selected]="i === suggestionIndex"
+                [class.active]="i === suggestionIndex"
+              >
+                <button
+                  type="button"
+                  (mousedown)="selectSuggestion(suggestion, $event)"
+                  (mouseenter)="suggestionIndex = i"
+                >
+                  <span class="suggest-icon" aria-hidden="true">{{ suggestion.icon }}</span>
+                  <span class="suggest-text">
+                    <span class="suggest-label" [innerHTML]="highlightMatch(suggestion.label)"></span>
+                    <small>{{ suggestion.sub }}</small>
+                  </span>
+                  <span class="suggest-kind">{{ suggestion.kindLabel }}</span>
+                </button>
+              </li>
+            } @empty {
+              <li class="suggest-empty">No matches — try another search.</li>
+            }
+          </ul>
+        }
       </div>
     </header>
-
-    <nav class="topnav" aria-label="Categories">
-      @for (category of categories; track category) {
-        <button
-          [class.selected]="activeCategory === category"
-          (click)="selectCategory(category)"
-        >
-          {{ category }}
-        </button>
-      }
-    </nav>
 
     <section class="hero glass">
       <div class="hero-glow" aria-hidden="true"></div>
@@ -77,7 +106,7 @@
     </section>
 
     <section class="channels-section" id="channels">
-      <div class="section-heading">
+      <div class="section-heading" appReveal>
         <div>
           <div class="section-kicker">FIND YOUR NEXT WATCH</div>
           <h2>Explore channels<span>.</span></h2>
@@ -93,7 +122,7 @@
         <p class="import-message">{{ importMessage }}</p>
       }
 
-      <div class="category-tabs">
+      <div class="category-tabs" appReveal>
         @for (category of categories; track category) {
           <button
             [class.selected]="activeCategory === category"
@@ -113,15 +142,42 @@
             <p>Loading channels...</p>
           </div>
         } @else {
-          @for (channel of filteredChannels; track channel.name) {
+          @for (channel of filteredChannels; track channel.name; let i = $index) {
             <button
               class="channel-card"
+              appReveal
+              [style.transition-delay]="(i % 8) * 60 + 'ms'"
               [class.channel-selected]="selectedChannel?.name === channel.name"
+              [class.is-previewing]="previewing === channel.name"
               (click)="playChannel(channel)"
+              (mouseenter)="startPreview(channel, previewVideo)"
+              (mouseleave)="stopPreview()"
+              (focus)="startPreview(channel, previewVideo)"
+              (blur)="stopPreview()"
             >
               <div class="channel-art" [style.background]="channel.color">
                 <span class="channel-status">{{ channel.status }}</span>
-                <span class="channel-icon">{{ channel.icon }}</span>
+                @if (channel.logo) {
+                  <img
+                    class="channel-logo"
+                    [src]="channel.logo"
+                    [alt]="channel.name + ' logo'"
+                    loading="lazy"
+                  />
+                } @else {
+                  <span class="channel-icon">{{ channel.icon }}</span>
+                }
+                <video
+                  #previewVideo
+                  class="channel-preview"
+                  muted
+                  playsinline
+                  preload="none"
+                  aria-hidden="true"
+                ></video>
+                @if (previewing === channel.name) {
+                  <span class="preview-live"><span class="live-dot"></span>LIVE PREVIEW</span>
+                }
                 <span class="card-play">▶</span>
               </div>
               <div class="channel-info">
@@ -264,7 +320,9 @@
         } @else {
           <app-channel-player
             [streamUrl]="channel.streamUrl"
-            [channelName]="channel.name">
+            [channelName]="channel.name"
+            [channels]="tvChannels"
+            (channelPick)="switchChannel($event)">
           </app-channel-player>
         }
       </div>

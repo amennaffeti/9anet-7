@@ -3,8 +3,29 @@
 }
 
 .catalogue-message {
-  padding: 32px 0;
+  padding: 32px 0 8px;
   color: #aaa;
+}
+
+.catalogue-retry {
+  padding: 0 0 24px;
+}
+
+.catalogue-retry button {
+  padding: 9px 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #ffffff22, #ffffff08);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.catalogue-retry button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
 }
 
 .shows-grid {

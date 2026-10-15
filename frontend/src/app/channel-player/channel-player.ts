@@ -2,10 +2,12 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  EventEmitter,
   Input,
   OnChanges,
   AfterViewInit,
   OnDestroy,
+  Output,
   SimpleChanges,
   ViewChild,
   inject
@@ -13,6 +15,13 @@ import {
 
 import Hls from 'hls.js';
 import { MediaControls } from '../media-controls/media-controls';
+
+export interface RailChannel {
+  name: string;
+  icon: string;
+  color: string;
+  status: string;
+}
 
 @Component({
   selector: 'app-channel-player',
@@ -28,6 +37,8 @@ export class ChannelPlayer
 
   @Input() streamUrl: string | null = null;
   @Input() channelName = 'Channel';
+  @Input() channels: RailChannel[] = [];
+  @Output() channelPick = new EventEmitter<string>();
 
   @ViewChild('videoElement')
   videoElement?: ElementRef<HTMLVideoElement>;
@@ -35,6 +46,9 @@ export class ChannelPlayer
   message = 'No stream URL configured.';
   private hls: Hls | null = null;
   private viewReady = false;
+  private railCloseTimer: ReturnType<typeof setTimeout> | null = null;
+
+  railOpen = false;
 
   ngAfterViewInit(): void {
     this.viewReady = true;
@@ -120,5 +134,46 @@ export class ChannelPlayer
 
   ngOnDestroy(): void {
     this.hls?.destroy();
+    if (this.railCloseTimer) {
+      clearTimeout(this.railCloseTimer);
+      this.railCloseTimer = null;
+    }
+  }
+
+  openRail(): void {
+    if (this.railCloseTimer) {
+      clearTimeout(this.railCloseTimer);
+      this.railCloseTimer = null;
+    }
+    if (!this.railOpen) {
+      this.railOpen = true;
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  scheduleRailClose(): void {
+    if (this.railCloseTimer) {
+      clearTimeout(this.railCloseTimer);
+    }
+    this.railCloseTimer = setTimeout(() => {
+      this.railOpen = false;
+      this.railCloseTimer = null;
+      this.changeDetector.markForCheck();
+    }, 220);
+  }
+
+  toggleRail(): void {
+    if (this.railCloseTimer) {
+      clearTimeout(this.railCloseTimer);
+      this.railCloseTimer = null;
+    }
+    this.railOpen = !this.railOpen;
+    this.changeDetector.markForCheck();
+  }
+
+  pickChannel(name: string): void {
+    this.railOpen = false;
+    this.changeDetector.markForCheck();
+    this.channelPick.emit(name);
   }
 }

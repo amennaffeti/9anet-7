@@ -18,6 +18,60 @@
       <span class="live-dot"></span>
       LIVE
     </div>
+
+    <button
+      type="button"
+      class="rail-toggle"
+      aria-label="Open channel list"
+      (click)="toggleRail()"
+    >☰</button>
+
+    <div
+      class="edge-strip"
+      aria-hidden="true"
+      (mouseenter)="openRail()"
+    >
+      <span>‹</span>
+    </div>
+
+    <aside
+      class="channel-rail"
+      [class.open]="railOpen"
+      [attr.aria-hidden]="!railOpen"
+      aria-label="Live TV channels"
+      (mouseleave)="scheduleRailClose()"
+      (mouseenter)="openRail()"
+    >
+      <div class="rail-head">
+        <span class="rail-title">Live TV</span>
+        <span class="rail-count">{{ channels.length }}</span>
+      </div>
+      <ul class="rail-list">
+        @for (channel of channels; track channel.name) {
+          <li>
+            <button
+              type="button"
+              class="rail-item"
+              [class.current]="channel.name === channelName"
+              [attr.aria-current]="channel.name === channelName ? 'true' : null"
+              (click)="pickChannel(channel.name)"
+            >
+              <span
+                class="rail-icon"
+                [style.background]="channel.color"
+                aria-hidden="true"
+              >{{ channel.icon }}</span>
+              <span class="rail-name">{{ channel.name }}</span>
+              @if (channel.name === channelName) {
+                <span class="rail-now">NOW</span>
+              }
+            </button>
+          </li>
+        } @empty {
+          <li class="rail-empty">No channels available.</li>
+        }
+      </ul>
+    </aside>
   </div>
 
   <p class="player-message">{{ message }}</p>

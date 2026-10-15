@@ -20,6 +20,8 @@ import {
 import { ChannelPlayer } from './channel-player/channel-player';
 import { MediaControls } from './media-controls/media-controls';
 import { Cartoons } from './cartoons/cartoons';
+import { Reveal } from './reveal';
+import Hls from 'hls.js';
 
 interface Channel {
   id: number;
@@ -29,15 +31,52 @@ interface Channel {
   icon: string;
   color: string;
   status: string;
+  logo: string | null;
   logoUrl: string | null;
   streamUrl: string | null;
   active: boolean;
 }
 
+interface Suggestion {
+  kind: 'channel' | 'show' | 'category';
+  kindLabel: string;
+  label: string;
+  sub: string;
+  icon: string;
+  category?: string;
+  channel?: Channel;
+  show?: 'spongebob' | 'sally';
+}
+
+const SHOW_SUGGESTIONS: Suggestion[] = [
+  {
+    kind: 'show',
+    kindLabel: 'Cartoon',
+    label: 'SpongeBob',
+    sub: 'Cartoons • long compilations',
+    icon: '🧽',
+    show: 'spongebob'
+  },
+  {
+    kind: 'show',
+    kindLabel: 'Cartoon',
+    label: 'Sally',
+    sub: 'Cartoons • 46 episodes',
+    icon: '👑',
+    show: 'sally'
+  }
+];
+
+const CATEGORY_ICONS: Record<string, string> = {
+  'Tunisian TV': '📺',
+  Cartoons: '🎨',
+  Radios: '♫'
+};
+
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule, ChannelPlayer, MediaControls, Cartoons],
+  imports: [FormsModule, ChannelPlayer, MediaControls, Cartoons, Reveal],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -63,7 +102,22 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
     | 'revealing'
     | 'done' = 'playing';
 
+  @ViewChild(Cartoons)
+  cartoonsComponent?: Cartoons;
+
   searchQuery = '';
+  searchFocused = false;
+  suggestionIndex = -1;
+  searchPlaceholder = 'Search channels, shows & radios…';
+  private placeholderTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly placeholderExamples = [
+    'Sally',
+    'SpongeBob',
+    'Wataniya 1',
+    'Al Jazeera',
+    'Mosaique FM',
+    'Cartoons'
+  ];
   activeCategory = 'Tunisian TV';
   selectedChannel: Channel | null = null;
   radioLoading = false;
@@ -80,17 +134,19 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
 
   private channelVisuals: Record<
     string,
-    { icon: string; color: string; status: string }
+    { icon: string; color: string; status: string; logo?: string }
   > = {
     'Wataniya 1': {
       icon: '🇹🇳',
       color: '#b32635',
-      status: 'TV'
+      status: 'TV',
+      logo: 'assets/wataniya1.jpg'
     },
     'Wataniya 2': {
       icon: '📺',
       color: '#345c91',
-      status: 'TV'
+      status: 'TV',
+      logo: 'assets/wataniya2.jpg'
     },
     'Hannibal TV': {
       icon: '🎬',
@@ -101,6 +157,12 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
       icon: '📡',
       color: '#247f83',
       status: 'TV'
+    },
+    'Al Jazeera': {
+      icon: '📰',
+      color: '#c47b1a',
+      status: 'TV',
+      logo: 'assets/aljazeera.jpg'
     },
     'Kids Zone': {
       icon: '🚀',
@@ -126,6 +188,23 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadChannels();
+    this.startPlaceholderRotation();
+  }
+
+  private startPlaceholderRotation(): void {
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+    let index = 0;
+    this.placeholderTimer = setInterval(() => {
+      index = (index + 1) % this.placeholderExamples.length;
+      this.searchPlaceholder = `Try "${this.placeholderExamples[index]}"…`;
+      this.changeDetector.markForCheck();
+    }, 3500);
   }
 
   ngAfterViewInit(): void {
@@ -172,6 +251,11 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
     if (this.introTimer) {
       clearTimeout(this.introTimer);
     }
+    if (this.placeholderTimer) {
+      clearInterval(this.placeholderTimer);
+      this.placeholderTimer = null;
+    }
+    this.stopPreview();
     this.clearIntroCutTimer();
     this.document.body.style.overflow = this.previousBodyOverflow ?? '';
   }
@@ -262,7 +346,8 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
               description: channel.description ?? '',
               icon: visual.icon,
               color: visual.color,
-              status: visual.status
+              status: visual.status,
+              logo: channel.logoUrl ?? visual.logo ?? null
             };
           });
 
@@ -313,6 +398,208 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
     this.activeCategory = category;
   }
 
+  get tvChannels(): Channel[] {
+    return this.channels.filter(
+      channel => channel.category !== 'Radios'
+    );
+  }
+
+  switchChannel(name: string): void {
+    const channel = this.channels.find(
+      candidate => candidate.name === name
+    );
+    if (channel && channel.name !== this.selectedChannel?.name) {
+      this.playChannel(channel);
+    }
+  }
+
+  previewing: string | null = null;
+  private previewHls: Hls | null = null;
+
+  startPreview(channel: Channel, video: HTMLVideoElement): void {
+    if (
+      !channel.streamUrl ||
+      channel.category === 'Radios' ||
+      (typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    ) {
+      return;
+    }
+
+    this.stopPreview();
+    this.previewing = channel.name;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        maxBufferLength: 8,
+        manifestLoadingMaxRetry: 1,
+        levelLoadingMaxRetry: 1
+      });
+      this.previewHls = hls;
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          this.stopPreview();
+        }
+      });
+      hls.loadSource(channel.streamUrl);
+      hls.attachMedia(video);
+    } else if (
+      video.canPlayType('application/vnd.apple.mpegurl')
+    ) {
+      video.src = channel.streamUrl;
+    } else {
+      this.previewing = null;
+      return;
+    }
+
+    video.muted = true;
+    video.play().catch(() => {
+      this.stopPreview();
+    });
+  }
+
+  stopPreview(): void {
+    this.previewHls?.destroy();
+    this.previewHls = null;
+    if (this.previewing !== null) {
+      this.previewing = null;
+    }
+  }
+
+  get showSuggestions(): boolean {
+    return this.searchFocused && this.searchQuery.trim().length > 0;
+  }
+
+  get suggestions(): Suggestion[] {
+    const query = this.searchQuery.toLowerCase().trim();
+    if (!query) return [];
+
+    const starts: Suggestion[] = [];
+    const contains: Suggestion[] = [];
+
+    for (const suggestion of this.allSuggestions()) {
+      const label = suggestion.label.toLowerCase();
+      if (label.startsWith(query)) {
+        starts.push(suggestion);
+      } else if (label.includes(query)) {
+        contains.push(suggestion);
+      }
+    }
+
+    return [...starts, ...contains].slice(0, 7);
+  }
+
+  private allSuggestions(): Suggestion[] {
+    const list: Suggestion[] = [...SHOW_SUGGESTIONS];
+
+    for (const category of this.categories) {
+      list.push({
+        kind: 'category',
+        kindLabel: 'Category',
+        label: category,
+        sub: 'Browse everything here',
+        icon: CATEGORY_ICONS[category] ?? '▣'
+      });
+    }
+
+    for (const channel of this.channels) {
+      list.push({
+        kind: 'channel',
+        kindLabel: channel.category,
+        label: channel.name,
+        sub: channel.description || channel.category,
+        icon: channel.icon,
+        category: channel.category,
+        channel
+      });
+    }
+
+    return list;
+  }
+
+  highlightMatch(label: string): string {
+    const query = this.searchQuery.trim();
+    if (!query) return label;
+    const index = label.toLowerCase().indexOf(query.toLowerCase());
+    if (index < 0) return label;
+    return (
+      label.slice(0, index) +
+      '<b>' +
+      label.slice(index, index + query.length) +
+      '</b>' +
+      label.slice(index + query.length)
+    );
+  }
+
+  onSearchKeydown(event: KeyboardEvent): void {
+    const items = this.suggestions;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (items.length === 0) return;
+      this.suggestionIndex =
+        event.key === 'ArrowDown'
+          ? (this.suggestionIndex + 1) % items.length
+          : (this.suggestionIndex - 1 + items.length) % items.length;
+    } else if (event.key === 'Enter') {
+      if (this.suggestionIndex >= 0 && this.suggestionIndex < items.length) {
+        event.preventDefault();
+        this.selectSuggestion(items[this.suggestionIndex]);
+      }
+    } else if (event.key === 'Escape') {
+      this.searchQuery = '';
+      this.suggestionIndex = -1;
+      (event.target as HTMLInputElement | null)?.blur();
+    } else {
+      this.suggestionIndex = -1;
+    }
+  }
+
+  onSearchBlur(): void {
+    // Let suggestion clicks land before closing the dropdown.
+    setTimeout(() => {
+      this.searchFocused = false;
+      this.suggestionIndex = -1;
+      this.changeDetector.markForCheck();
+    }, 150);
+  }
+
+  clearSearch(event: Event): void {
+    event.preventDefault();
+    this.searchQuery = '';
+    this.suggestionIndex = -1;
+  }
+
+  selectSuggestion(suggestion: Suggestion, event?: Event): void {
+    event?.preventDefault();
+    this.searchFocused = false;
+    this.suggestionIndex = -1;
+
+    if (suggestion.kind === 'channel' && suggestion.channel) {
+      this.searchQuery = '';
+      this.selectCategory(suggestion.category ?? suggestion.channel.category);
+      this.playChannel(suggestion.channel);
+      return;
+    }
+
+    if (suggestion.kind === 'show' && suggestion.show) {
+      this.searchQuery = '';
+      this.selectCategory('Cartoons');
+      this.changeDetector.markForCheck();
+      this.scrollToChannels();
+      const show = suggestion.show;
+      setTimeout(() => {
+        this.cartoonsComponent?.openShow(show);
+        this.changeDetector.markForCheck();
+      });
+      return;
+    }
+
+    this.searchQuery = '';
+    this.selectCategory(suggestion.label);
+    this.scrollToChannels();
+  }
+
   scrollToChannels(): void {
     this.document
       .getElementById('channels')
@@ -335,6 +622,7 @@ export class App implements OnInit, AfterViewInit, OnDestroy {
   }
 
   closePlayer(): void {
+    this.stopPreview();
     this.selectedChannel = null;
     this.radioLoading = false;
     this.radioFailed = false;
