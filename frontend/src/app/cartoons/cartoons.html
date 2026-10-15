@@ -113,7 +113,7 @@
         <button
           type="button"
           class="cartoon-card"
-          [disabled]="!video.videoId"
+          [disabled]="!video.videoId && !video.streamUrl"
           (click)="playVideo(video)"
         >
           <div class="cartoon-thumbnail">
@@ -133,7 +133,7 @@
             @if (video.durationMinutes) {
               <span class="cartoon-duration">{{ video.durationMinutes }} min</span>
             }
-            @if (video.videoId) {
+            @if (video.videoId || video.streamUrl) {
               <span class="cartoon-play">▶</span>
             } @else {
               <span class="cartoon-soon">Soon</span>
@@ -166,13 +166,24 @@
 
         <h3>{{ video.title }}</h3>
 
-        <iframe
-          [src]="selectedVideoUrl"
-          [title]="video.title"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerpolicy="strict-origin-when-cross-origin"
-          allowfullscreen
-        ></iframe>
+        @if (video.streamUrl) {
+          <video
+            [src]="video.streamUrl"
+            [poster]="video.poster"
+            controls
+            autoplay
+            playsinline
+            preload="metadata"
+          ></video>
+        } @else {
+          <iframe
+            [src]="selectedVideoUrl"
+            [title]="video.title"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          ></iframe>
+        }
 
         <div class="cartoon-player-nav">
           <button

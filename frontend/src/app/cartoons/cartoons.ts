@@ -119,9 +119,18 @@ export class Cartoons implements OnInit {
 
   get selectedIndex(): number {
     if (!this.selectedVideo) return -1;
-    return this.currentVideos.findIndex(
-      video => video.videoId === this.selectedVideo?.videoId
-    );
+    const selected = this.selectedVideo;
+    return this.currentVideos.findIndex(video => {
+      if (selected.episodeNumber != null
+        && video.episodeNumber != null) {
+        return video.episodeNumber === selected.episodeNumber;
+      }
+      if (selected.videoId && video.videoId) {
+        return video.videoId === selected.videoId;
+      }
+      return !!selected.streamUrl
+        && video.streamUrl === selected.streamUrl;
+    });
   }
 
   get hasPrevious(): boolean {
@@ -183,7 +192,7 @@ export class Cartoons implements OnInit {
   }
 
   playVideo(video: CartoonVideo): void {
-    if (!video.videoId) return;
+    if (!video.videoId && !video.streamUrl) return;
     this.selectedVideo = video;
     this.selectedVideoUrl = this.embedUrlFor(video);
     this.changeDetector.markForCheck();

@@ -11,6 +11,9 @@ export interface CartoonVideo {
   publishedAt: string;
   durationMinutes?: string;
   episodeNumber?: number;
+  streamUrl?: string;
+  pageUrl?: string;
+  poster?: string;
 }
 
 @Injectable({
@@ -46,9 +49,9 @@ export class CartoonService {
   getSallyVideos(): Observable<CartoonVideo[]> {
     if (!this.sallyCache$) {
       this.sallyCache$ = this.http
-        .get<CartoonVideo[]>('http://localhost:8080/api/cartoons/sally')
+        .get<CartoonVideo[]>('http://localhost:8080/api/cartoons/sally/toons')
         .pipe(
-          // Cold discovery queries YouTube ~46 times: allow two minutes,
+          // Cold scrape visits ~46 episode pages: allow two minutes,
           // then surface the error instead of spinning forever.
           timeout(120000),
           catchError(error => {
